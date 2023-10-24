@@ -8,11 +8,10 @@ This document aims to provide technicians with detailed instructions on WiFi hea
 
 ## Requirements
 
-1. Knowledge of Python
-2. Knowledge of Linux Networking 
-3. Familiarity with Raspberry Pi / Pi Systems and Linux Machines 
-4. Basic understanding of WiFi / Radio Physics
-5. Moderate knowledge on Docker / Operations with Docker   
+1. **Iperf Server:** Windows or Linux machine. (Linux preferable) To run an iperf3 server using Docker.
+2. **Survey Machine:** Linux Machine or VM to run the heatmapping software, this docker image CANNOT be initialised in windows.
+3. **Network:** Local Area Network access.
+4. **Location:** A very high resolution image of a Floorview / Floorplan of the area you are mapping.
 
 ## How the Software Works
 
@@ -24,7 +23,55 @@ This document aims to provide technicians with detailed instructions on WiFi hea
 
 ## Setup Guide
 
-### 1. iperf Server Setup (Raspberry Pi)
+
+1. **Running In Docker (Recommended):**
+
+    - **iperf3 server (Server):**
+        ```bash
+        docker run -it --rm -p 5201:5201/tcp -p 5201:5201/udp jantman/python-wifi-survey-heatmap iperf3 -s
+        ```
+
+    - **Survey Machine (Linux):**
+        ```bash
+        docker run \
+          --net="host" \
+          --privileged \
+          --name survey \
+          -it \
+          --rm \
+          -v $(pwd):/pwd \
+          -w /pwd \
+          -e DISPLAY=$DISPLAY \
+          -v "$HOME/.Xauthority:/root/.Xauthority:ro" \
+          jantman/python-wifi-survey-heatmap \
+          wifi-survey -b <BSSID> -i <INTERFACE> -s <IPERF SERVER> -p <FLOORPLAN PNG> -t <TITLE>
+        ```
+
+    - **Heatmap (Linux machine post survey):**
+        ```bash
+        docker run -it --rm -v $(pwd):/pwd -w /pwd jantman/python-wifi-survey-heatmap:23429a4 wifi-heatmap <TITLE>
+        ```
+
+
+
+Replace `<BSSID>, <INTERFACE>, <IPERF SERVER>, <FLOORPLAN PNG>, and <TITLE>` with your network's BSSID, your wireless interface name, the IP address of your iperf3 server, the path to your floorplan image, and a title for your survey, respectively.
+
+   - **Overview of procedure:**
+   - The iperf server was setup using docker on either a windows or linux machine. (Virtualisation should be enabled in bios)
+   - The docker command was given on the linux machine to start the survey process, a window popped up with the image. The linux machine was moved to a location and the point at which the linux machine was, was clicked on the floorview image and the survey begun for that area. This move and click process was then repeated until a large area was covered, spaced aproximately 4-5 meters apart from each point.
+
+   - See below for example:
+
+![quality_WAP1](https://github.com/aacsolutions-anthony/AAC_HEATMAP_PROCESS/assets/131961269/4a602dd7-953b-4211-bef1-4a55c1b8e6ae)
+   
+   - Once The survey had been completed, the window was closed and the final docker command was run. (To generate the heatmap)
+
+These instructions should aid in setting up the necessary environment to perform a WiFi survey and generate heatmaps of a room or building.
+
+
+### 2. iperf Server Setup (Raspberry Pi) 
+
+0. This step and the following instructions can be ignored if using the preferential Docker method above. 
 
 1. Install iperf3 on your Raspberry Pi:
 
@@ -87,38 +134,6 @@ This document aims to provide technicians with detailed instructions on WiFi hea
         wifi-heatmap <TITLE>
         ```
 
-4. **Running In Docker (Recommended):**
-
-    - **Survey:**
-        ```bash
-        docker run \
-          --net="host" \
-          --privileged \
-          --name survey \
-          -it \
-          --rm \
-          -v $(pwd):/pwd \
-          -w /pwd \
-          -e DISPLAY=$DISPLAY \
-          -v "$HOME/.Xauthority:/root/.Xauthority:ro" \
-          jantman/python-wifi-survey-heatmap \
-          wifi-survey -b <BSSID> -i <INTERFACE> -s <IPERF SERVER> -p <FLOORPLAN PNG> -t <TITLE>
-        ```
-
-    - **Heatmap:**
-        ```bash
-        docker run -it --rm -v $(pwd):/pwd -w /pwd jantman/python-wifi-survey-heatmap:23429a4 wifi-heatmap <TITLE>
-        ```
-
-    - **iperf3 server:**
-        ```bash
-        docker run -it --rm -p 5201:5201/tcp -p 5201:5201/udp jantman/python-wifi-survey-heatmap iperf3 -s
-        ```
-
-Replace `<BSSID>, <INTERFACE>, <IPERF SERVER>, <FLOORPLAN PNG>, and <TITLE>` with your network's BSSID, your wireless interface name, the IP address of your iperf3 server, the path to your floorplan image, and a title for your survey, respectively.
-
-These instructions should aid in setting up the necessary environment to perform a WiFi survey and generate heatmaps of a room or building.
-
 
 ## Issues
 
@@ -128,9 +143,9 @@ If you encounter the following error:
 
 ```plaintext
 Couldn't connect to accessibility bus: Failed to connect to socket /run/user/1000/at-spi/bus_0: No such file or directory
-
-when running in Docker, it's necessary to mount the socket in Docker explicitly by adding an additional '-v' switch:
 ```
+when running in Docker, it's necessary to mount the socket in Docker explicitly by adding an additional '-v' switch:
+
 
 ```bash
 
