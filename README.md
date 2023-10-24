@@ -1,4 +1,4 @@
-# AAC Solutions Heat Mapping Notes
+# AAC Solutions Heat Mapping
 
 This document is centered around Jantman's Python Software and Docker Image.
 
